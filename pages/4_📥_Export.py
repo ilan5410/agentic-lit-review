@@ -93,6 +93,48 @@ with col1:
     )
 
 with col2:
+    st.subheader("Interactive Dashboard")
+
+    from data.report_generator import build_html_report
+    from data.database import get_config
+    from utils.network import build_network
+
+    cfg = get_config(conn)
+    rq = cfg.get("research_question", "Literature Review")
+
+    # Build a default similarity network for the report
+    _net_html = None
+    try:
+        from data.database import get_embeddings as _get_emb
+        _stored = _get_emb(conn)
+        _emb_map = {pid: vec for pid, vec in _stored} if _stored else None
+        _net_html, _, _, _ = build_network(
+            included, network_type="similarity", max_nodes=80, embedding_map=_emb_map
+        )
+    except Exception:
+        pass
+
+    with st.spinner("Assembling HTML report…"):
+        _report_bytes = build_html_report(
+            included=included,
+            all_papers=all_papers,
+            synthesis=synthesis,
+            counts=counts,
+            research_question=rq,
+            network_html=_net_html,
+        )
+
+    _date_str = __import__("datetime").datetime.now().strftime("%Y-%m-%d")
+    st.download_button(
+        label="🌐 Download Dashboard Report (.html)",
+        data=_report_bytes,
+        file_name=f"literature_review_dashboard_{_date_str}.html",
+        mime="text/html",
+        use_container_width=True,
+        help="Self-contained HTML with all charts, paper table, synthesis and network",
+    )
+
+    st.divider()
     st.subheader("Reports")
 
     # DOCX narrative report

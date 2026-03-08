@@ -33,7 +33,7 @@ included = [p for p in all_papers if p.get("final_status") == "INCLUDED"]
 synthesis = get_synthesis(conn)
 
 # ── Header ─────────────────────────────────────────────────────────────────────
-col_title, col_rescore = st.columns([5, 1])
+col_title, col_rescore, col_save = st.columns([4, 1, 1])
 with col_title:
     st.title("📊 Results Dashboard")
     st.caption(
@@ -53,6 +53,28 @@ with col_rescore:
         orch.run_relevance_scoring()
         log_placeholder.success("Relevance scoring complete!")
         st.rerun()
+with col_save:
+    st.write("")
+    st.write("")
+    if st.button("💾 Save Dashboard", help="Download full interactive HTML report (excludes network for speed)"):
+        from data.report_generator import build_html_report
+        from data.database import get_config as _get_cfg
+        _rq = _get_cfg(conn).get("research_question", "Literature Review")
+        with st.spinner("Building report…"):
+            _report_bytes = build_html_report(
+                included=included,
+                all_papers=all_papers,
+                synthesis=synthesis,
+                counts=counts,
+                research_question=_rq,
+            )
+        _date_str = __import__("datetime").datetime.now().strftime("%Y-%m-%d")
+        st.download_button(
+            label="⬇️ Download HTML",
+            data=_report_bytes,
+            file_name=f"literature_review_dashboard_{_date_str}.html",
+            mime="text/html",
+        )
 
 # ── Tabs ───────────────────────────────────────────────────────────────────────
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
